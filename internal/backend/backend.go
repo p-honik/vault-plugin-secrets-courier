@@ -66,6 +66,10 @@ type backend struct {
 	wg     sync.WaitGroup // running deliveries, waited on briefly in Clean
 }
 
+// Version is the plugin version reported to Vault. Release builds set it at link
+// time from the git tag (see the Makefile); an empty value reports no version.
+var Version string
+
 // Factory returns the configured backend. It is the plugin entry point.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	typeName := defaultCredentialType
@@ -115,6 +119,8 @@ func newBackend(ct credentialType) *backend {
 	b.Backend = &framework.Backend{
 		Help:        strings.TrimSpace(backendHelp),
 		BackendType: logical.TypeLogical,
+		// Self-reported version, shown by `vault plugin info` and on the mount.
+		RunningVersion: Version,
 		PathsSpecial: &logical.Paths{
 			// Keep this list exact and short. Never add a
 			// broad pattern such as "*". The type adds its own public patterns.

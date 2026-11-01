@@ -1,8 +1,17 @@
 BINARY := bin/vault-plugin-secrets-courier
 
-.PHONY: build test vet fmt live-test
+# The version comes from the git tag (v0.1.0, or v0.1.0-3-gabc1234[-dirty] between
+# tags). Without any tag it falls back to a development version. Override with
+# `make build VERSION=v0.1.0`.
+VERSION ?= $(shell git describe --tags --dirty 2>/dev/null || echo v0.0.0-dev)
+PKG := github.com/p-honik/vault-plugin-secrets-courier/internal/backend
+
+.PHONY: build version test vet fmt live-test
 build:
-	go build -trimpath -ldflags="-s -w" -o $(BINARY) ./cmd/vault-plugin-secrets-courier
+	go build -trimpath -ldflags="-s -w -X $(PKG).Version=$(VERSION)" -o $(BINARY) ./cmd/vault-plugin-secrets-courier
+
+version:
+	@echo $(VERSION)
 
 test:
 	go test ./...
