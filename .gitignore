@@ -1,0 +1,19 @@
+# Build output
+/bin/
+
+# Test and coverage artifacts
+*.test
+*.out
+coverage.*
+
+# Local configuration and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

@@ -584,6 +584,23 @@ make test         # unit tests
 make live-test    # runs the plugin inside a real Vault; needs VAULT_BIN
 ```
 
+### Versioning and releases
+
+The project follows [Semantic Versioning](https://semver.org/) and keeps a
+[changelog](CHANGELOG.md). The version is the git tag (`v0.1.0`); `make build`
+embeds it in the binary through `git describe`, and the plugin reports it to
+Vault. Check it with `make version`, or override it with
+`make build VERSION=v0.1.0`. Register the plugin with the same version:
+
+```shell
+vault plugin register -sha256="$SHA256" -command=vault-plugin-secrets-courier \
+    -version=v0.1.0 secret vault-plugin-secrets-courier
+```
+
+Every user-visible change goes under `[Unreleased]` in the changelog in the same
+pull request. To release, move those entries under a new version heading, merge,
+and tag the merge commit on `main`.
+
 `make live-test` starts `vault server -dev` with the plugin registered and drives
 it over HTTP (`internal/livetest`, build tag `live`). Run it with
 `VAULT_BIN=/path/to/vault make live-test`, using a Vault 1.18.x binary. It has
