@@ -11,6 +11,14 @@ or **Removed**, and changes to the storage format are called out explicitly.
 
 ## [Unreleased]
 
+### Fixed
+
+- A panic in the `request/<role>` handler after its in-flight slot was reserved
+  (for example while reading or using the key set) no longer leaks the slot. The
+  reservation and the `min_request_interval` timer are now released on every
+  early exit, so repeated panics cannot exhaust `max_inflight` or lock a
+  requester out until the next restart.
+
 ## [0.1.0] - 2026-11-01
 
 First public release.
