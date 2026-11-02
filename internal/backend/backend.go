@@ -62,8 +62,10 @@ type backend struct {
 	ctxMu  sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
-	closed bool           // set by clean; a closed backend starts no deliveries
-	wg     sync.WaitGroup // running deliveries, waited on briefly in Clean
+	closed bool // set by clean; a closed backend starts no deliveries
+	// closedWarned makes the "request after clean" warning appear once.
+	closedWarned atomic.Bool
+	wg           sync.WaitGroup // running deliveries, waited on briefly in Clean
 }
 
 // Version is the plugin version reported to Vault. Release builds set it at link

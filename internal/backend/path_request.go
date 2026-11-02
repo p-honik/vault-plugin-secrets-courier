@@ -97,19 +97,25 @@ func (b *backend) handleRequest(ctx context.Context, req *logical.Request, d *fr
 	if !ok {
 		return nil, nil
 	}
+	// The reservation is released on every way out until the delivery goroutine
+	// owns it, including a panic (the guard recovers it, so nothing else would
+	// release the slot).
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			res.abort()
+		}
+	}()
 	jc := cfg.JWT
 	if jc == nil {
-		res.abort()
 		return b.internalFault("loading config", name, nil)
 	}
 	ks, err := b.cachedKeySet(ctx, req.Storage)
 	if err != nil || ks == nil {
-		res.abort()
 		return b.internalFault("loading key set", name, err)
 	}
 	token, err := signToken(ks, jc, r, receiptURL, nonce, now)
 	if err != nil {
-		res.abort()
 		return b.internalFault("signing", name, err)
 	}
 
@@ -126,9 +132,9 @@ func (b *backend) handleRequest(ctx context.Context, req *logical.Request, d *fr
 		policy:          b.currentPolicy,
 		logger:          b.Logger(),
 	}
-	if !b.startDelivery(dl, res) {
-		res.abort()
-	}
+	// On false nothing was started and the deferred abort releases the slot; on
+	// true the goroutine owns the reservation and calls finish.
+	handedOff = b.startDelivery(dl, res)
 	return nil, nil
 }
 
@@ -140,6 +146,14 @@ func (b *backend) startDelivery(dl *delivery, res *reservation) bool {
 	b.ctxMu.Lock()
 	if b.closed {
 		b.ctxMu.Unlock()
+		// Clean is the end of a backend's life, so this is expected only for a
+		// request that raced with unmount or step-down. If it keeps happening, the
+		// host is serving requests on a backend it already cleaned up, and every
+		// request would otherwise be dropped silently. Logged once.
+		if b.closedWarned.CompareAndSwap(false, true) {
+			b.Logger().Warn("request dropped: this backend has been cleaned up and starts no deliveries",
+				"role", dl.roleName)
+		}
 		return false
 	}
 	if b.ctx == nil {
