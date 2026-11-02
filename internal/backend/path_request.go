@@ -146,6 +146,14 @@ func (b *backend) startDelivery(dl *delivery, res *reservation) bool {
 	b.ctxMu.Lock()
 	if b.closed {
 		b.ctxMu.Unlock()
+		// Clean is the end of a backend's life, so this is expected only for a
+		// request that raced with unmount or step-down. If it keeps happening, the
+		// host is serving requests on a backend it already cleaned up, and every
+		// request would otherwise be dropped silently. Logged once.
+		if b.closedWarned.CompareAndSwap(false, true) {
+			b.Logger().Warn("request dropped: this backend has been cleaned up and starts no deliveries",
+				"role", dl.roleName)
+		}
 		return false
 	}
 	if b.ctx == nil {

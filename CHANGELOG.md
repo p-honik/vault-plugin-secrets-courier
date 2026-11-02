@@ -11,6 +11,12 @@ or **Removed**, and changes to the storage format are called out explicitly.
 
 ## [Unreleased]
 
+### Added
+
+- A warning, logged once, when a `request/<role>` request reaches a backend that
+  has already been cleaned up (unmount or step-down). Such a request is dropped
+  with the usual `204`; before, nothing was logged.
+
 ### Fixed
 
 - A panic in the `request/<role>` handler after its in-flight slot was reserved
