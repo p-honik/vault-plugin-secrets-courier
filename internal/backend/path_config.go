@@ -141,7 +141,10 @@ func (b *backend) handleConfigWrite(ctx context.Context, req *logical.Request, d
 		return nil, err
 	}
 	// Tightening applies at once, including to the retry of an in-flight delivery.
-	b.policy.Store(policyFor(&merged.mountConfig))
+	// Invalidate first: a request that read the old config must not be able to
+	// replace the new policy afterwards.
+	b.invalidate()
+	b.installPolicy(&merged.mountConfig)
 	return nil, nil
 }
 

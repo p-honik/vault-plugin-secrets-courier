@@ -67,6 +67,13 @@ func (b *backend) invalidate() {
 	b.cache.ksKnown = false
 }
 
+// cacheGeneration is the number of invalidations so far.
+func (b *backend) cacheGeneration() uint64 {
+	b.cache.mu.Lock()
+	defer b.cache.mu.Unlock()
+	return b.cache.gen
+}
+
 // onInvalidate is the SDK Invalidate hook: some storage key changed elsewhere.
 func (b *backend) onInvalidate(_ context.Context, _ string) { b.invalidate() }
 

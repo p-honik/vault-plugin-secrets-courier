@@ -55,6 +55,10 @@ type backend struct {
 	// every request, so the goroutines never need storage access.
 	policy    atomic.Pointer[networkPolicy]
 	policySrc atomic.Pointer[mountConfig] // the config policy was built from
+	// policyMu serializes every change to policy and policySrc, so a request that
+	// read the config before a config write cannot overwrite the policy that
+	// write installed (see refreshPolicy and installPolicy).
+	policyMu sync.Mutex
 
 	// ctx is the parent context of delivery goroutines. It is created in
 	// InitializeFunc and cancelled in Clean; request contexts end when the
