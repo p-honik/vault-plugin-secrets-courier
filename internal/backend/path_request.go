@@ -82,12 +82,15 @@ func (b *backend) handleRequest(ctx context.Context, req *logical.Request, d *fr
 		return nil, nil
 	}
 
+	// The generation is read before the config, so refreshPolicy can tell that the
+	// config it holds was superseded by a write in between.
+	gen := b.cacheGeneration()
 	cfg, err := b.cachedConfig(ctx, req.Storage)
 	if err != nil {
 		return b.internalFault("loading config", name, err)
 	}
 	mc := &cfg.mountConfig
-	b.refreshPolicy(mc)
+	b.refreshPolicy(mc, gen)
 
 	// Reserve, then sign: the cheap limit checks run first, and a request that is
 	// dropped here never reads the key set. All checks and the commit are one
@@ -178,13 +181,28 @@ func (b *backend) startDelivery(dl *delivery, res *reservation) bool {
 }
 
 // refreshPolicy rebuilds the network policy only when the mount config object
-// changed (the cache hands out the same pointer until it is invalidated).
-func (b *backend) refreshPolicy(mc *mountConfig) {
-	if b.policySrc.Load() == mc {
+// changed (the cache hands out the same pointer until it is invalidated). gen is
+// the cache generation read before mc was loaded: if the cache was invalidated
+// since, mc may predate a config write that already installed a newer policy, so
+// it is not applied. The next request loads the current config.
+func (b *backend) refreshPolicy(mc *mountConfig, gen uint64) {
+	b.policyMu.Lock()
+	defer b.policyMu.Unlock()
+	if b.policySrc.Load() == mc || b.cacheGeneration() != gen {
 		return
 	}
 	b.policy.Store(policyFor(mc))
 	b.policySrc.Store(mc)
+}
+
+// installPolicy makes the policy of a just-written config current at once. The
+// cache must already be invalidated, so that no reader holding an older config
+// can apply it afterwards.
+func (b *backend) installPolicy(mc *mountConfig) {
+	b.policyMu.Lock()
+	defer b.policyMu.Unlock()
+	b.policy.Store(policyFor(mc))
+	b.policySrc.Store(nil) // the next request rebuilds it from the cached config
 }
 
 // internalFault logs a failure after the checks and still answers 204: the

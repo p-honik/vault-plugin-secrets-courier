@@ -11,6 +11,14 @@ or **Removed**, and changes to the storage format are called out explicitly.
 
 ## [Unreleased]
 
+### Fixed
+
+- A `request/<role>` call that had read the config just before a `courier/config`
+  write could replace the network policy that write had installed, re-opening a
+  network the admin had just denied until the next request. The write now
+  invalidates the cache before installing its policy, and a request only applies
+  a policy built from a config no older than the last write.
+
 ## [0.1.1] - 2026-11-02
 
 ### Added
