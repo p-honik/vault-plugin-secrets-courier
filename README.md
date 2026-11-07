@@ -587,14 +587,15 @@ make live-test    # runs the plugin inside a real Vault; needs VAULT_BIN
 ### Versioning and releases
 
 The project follows [Semantic Versioning](https://semver.org/) and keeps a
-[changelog](CHANGELOG.md). The version is the git tag (`v0.1.0`); `make build`
+[changelog](CHANGELOG.md). The version is the git tag (for example `vX.Y.Z`); `make build`
 embeds it in the binary through `git describe`, and the plugin reports it to
 Vault. Check it with `make version`, or override it with
-`make build VERSION=v0.1.0`. Register the plugin with the same version:
+`make build VERSION=<version>`. Register the plugin with the same version:
 
 ```shell
+VERSION=$(make version)
 vault plugin register -sha256="$SHA256" -command=vault-plugin-secrets-courier \
-    -version=v0.1.0 secret vault-plugin-secrets-courier
+    -version="$VERSION" secret vault-plugin-secrets-courier
 ```
 
 Every user-visible change goes under `[Unreleased]` in the changelog in the same
